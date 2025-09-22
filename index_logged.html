@@ -1,0 +1,1265 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ZAIN.NET Crypto Futures – Full Final (ATR+SR + Auto-pattern + Candles) — Updated</title>
+
+<!-- Libraries -->
+<script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+
+<style>
+:root{
+  --bg:#071024; --card:#0f1724; --muted:#9fb0c8; --text:#e6f2ff;
+  --accent:#22c55e; --danger:#ff6b6b; --glass:#0b1424;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:Inter,Segoe UI,Roboto,Helvetica,Arial,system-ui; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1200px;margin:14px auto;padding:12px}
+header{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+h1{font-size:18px;margin:0}
+.controls{display:grid;grid-template-columns:repeat(12,1fr);gap:8px;width:100%}
+.c{grid-column:auto/span 3}
+@media(max-width:900px){.c{grid-column:auto/span 6}}
+@media(max-width:600px){.c{grid-column:auto/span 12}}
+input,select,button,textarea{width:100%;padding:8px;border-radius:8px;border:1px solid #21324a;background:#071822;color:var(--text)}
+button{cursor:pointer}
+button.primary{background:linear-gradient(180deg,#0b6b4f,#0a5a42);border:none;color:#e9fff1}
+.grid{display:grid;grid-template-columns:1fr 420px;gap:12px}
+@media(max-width:980px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:12px;padding:12px;border:1px solid #122033}
+#chart{height:360px}
+#indicatorChart{height:120px;margin-top:8px}
+.list{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
+@media(max-width:980px){.list{grid-template-columns:1fr}}
+.coin{padding:10px;border-radius:10px;border:1px solid #17283a;background:linear-gradient(180deg,#071422,#081826);display:flex;flex-direction:column;gap:8px}
+.coin:hover{outline:1px solid #1f324a;cursor:pointer}
+.pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:12px}
+.pill.long{background:#063;color:#bfffe0}
+.pill.short{background:#600;color:#ffdede}
+.pill.neutral{background:#30343a;color:#cbd5e1}
+.pill.queue{display:none} /* hide queue pills entirely */
+.muted{color:var(--muted);font-size:13px}
+.small{font-size:12px;color:#9fb0c8}
+.kpi{display:flex;gap:8px;flex-wrap:wrap}
+.kpi .box{background:#071826;padding:8px;border-radius:8px;border:1px solid #123045}
+.history{max-height:240px;overflow:auto;font-size:13px;white-space:pre-wrap}
+.footer{margin-top:12px;color:var(--muted);font-size:13px;text-align:center}
+.button-row{display:flex;gap:8px;align-items:center}
+.toggle-box{display:flex;gap:6px;flex-wrap:wrap;font-size:12px}
+.badge{display:inline-block;padding:2px 6px;border-radius:6px;background:#0a1a2e;border:1px solid #123045;font-size:11px;color:#9fb0c8}
+.keterangan-inline{margin-top:8px;padding:10px;border-radius:8px;background:#071826;border:1px solid #123045}
+.keterangan-pre{white-space:pre-wrap;font-size:13px;color:#dff3ff}
+.copy-btn{margin-left:8px;padding:6px 8px;border-radius:8px;background:#0b6b4f;border:none;color:#e9fff1;cursor:pointer}
+.hr{height:1px;background:#0d1c32;margin:8px 0}
+.exchange-badge{font-size:11px;padding:3px 6px;border-radius:6px;background:#0b2a3f;color:#9fd1ff;margin-left:6px}
+.mm-table{width:100%;border-collapse:collapse;margin-top:8px}
+.mm-table th,.mm-table td{border:1px solid #16304a;padding:6px;font-size:12px;text-align:center}
+.mm-table th{background:#0b1b30}
+#historyContainer { display:none; }
+#scrib { display:block; white-space:pre-wrap; width:100%; height:120px; padding:8px; background:#071826; color:var(--text); border-radius:8px; border:1px solid #123045; margin-top:8px }
+.risk-low{background:#083f2a;color:#bfffe0;padding:4px 8px;border-radius:6px;font-size:12px}
+.risk-med{background:#553f07;color:#fff1c9;padding:4px 8px;border-radius:6px;font-size:12px}
+.risk-high{background:#3a0710;color:#ffdede;padding:4px 8px;border-radius:6px;font-size:12px}
+
+/* modal */
+.modal{position:fixed;left:0;top:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:9999}
+.modal.active{display:flex}
+.modal-content{width:95%;max-width:1100px;background:var(--card);padding:12px;border-radius:12px}
+.modal .close{position:absolute;right:22px;top:18px;background:transparent;border:none;color:var(--text);font-size:26px;cursor:pointer}
+
+/* notification */
+.notify{position:fixed;right:16px;bottom:16px;background:#0b1726;padding:12px;border-radius:8px;color:#fff;box-shadow:0 8px 30px rgba(0,0,0,0.6);z-index:99999}
+.notify.tp{border-left:6px solid #22c55e}
+.notify.sl{border-left:6px solid #ef4444}
+
+/* responsive */
+@media(max-width:980px){ .list{grid-template-columns:1fr} .grid{grid-template-columns:1fr} }
+
+/* --- fullscreen chart styles --- */
+#chartContainer { position: relative; transition: all .12s ease; }
+#chartContainer.fullscreen {
+  position: fixed !important;
+  top: 0; left: 0;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(6,7,11,0.98);
+  z-index: 99999;
+  padding: 18px;
+  box-sizing: border-box;
+}
+#chartContainer.fullscreen #chart {
+  height: calc(100vh - 40px) !important;
+  width: calc(100vw - 40px) !important;
+}
+#fullscreenBtn, #closeFullscreenBtn { font-weight:600; }
+
+/* small winrate pie styling */
+.pie-card{padding:8px; width:220px; text-align:center}
+.pie-legend{margin-top:6px; text-align:left; max-height:160px; overflow:auto; font-size:13px}
+
+/* logs */
+#log{max-height:240px;overflow:auto;white-space:pre-wrap;font-size:12px;background:#071422;padding:8px;border-radius:6px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>ZAIN.NET Crypto Futures – Full Final (Updated)</h1>
+  <div class="small muted">Template: ATR SL/TP, SR lookback, Auto-monitor, Auto-pattern</div>
+  <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+    <label class="small muted">Tema:</label>
+    <select id="themeSelect" style="width:160px; padding:8px; border-radius:8px; border:1px solid #21324a; background:#071822; color:var(--text)">
+      <option value="dark">Dark</option>
+      <option value="light">Light</option>
+    </select>
+  </div>
+</header>
+
+<section class="card controls" style="margin-bottom:12px">
+  <div class="c"><label>Timeframes (pilih manual)
+    <select id="tf" multiple>
+      <option value="1m">1m</option>
+      <option value="5m">5m</option>
+      <option value="15m">15m</option>
+      <option value="30m">30m</option>
+      <option value="1h" selected>1h</option>
+      <option value="4h" selected>4h</option>
+      <option value="1d" selected>1d</option>
+    </select></label></div>
+
+  <div class="c"><label>ATR Period
+    <input id="atrPeriod" type="number" min="2" max="100" value="14"></label></div>
+
+  <div class="c"><label>SR Candles (lookback)
+    <input id="srCandles" type="number" min="20" max="500" value="100"></label></div>
+
+  <div class="c"><label>TP1 Offset (×ATR)
+    <input id="tp1Offset" type="number" step="0.01" min="0" max="10" value="0.20"></label></div>
+
+  <div class="c"><label>TP2 Offset (×ATR)
+    <input id="tp2Offset" type="number" step="0.01" min="0" max="10" value="0.10"></label></div>
+
+  <div class="c"><label>TP3 Offset (×ATR)
+    <input id="tp3Offset" type="number" step="0.01" min="0" max="10" value="0.00"></label></div>
+
+  <div class="c"><label>Top N USDT
+    <input id="topN" type="number" min="5" max="200" value="40"></label></div>
+
+  <div class="c"><label>Auto-monitor interval (minutes)
+    <input id="autoMin" type="number" min="1" max="60" value="7"></label></div>
+
+  <div class="c" style="grid-column:span 12">
+    <div class="button-row">
+      <button class="primary" id="startBtn">Start Scan (Binance)</button>
+      <button id="stopBtn">Stop</button>
+      <button id="clearHistBtn" style="background:#2b2b2b;color:#fff">Clear History</button>
+      <button id="exportBtn" style="background:#0a2b3f;color:#fff">Export History</button>
+      <div class="small muted" style="margin-left:8px">Status: <span id="status">Idle</span></div>
+    </div>
+
+    <div style="margin-top:12px; display:flex; gap:12px; align-items:center">
+      <div class="card pie-card">
+        <div class="small muted">Per-Coin Status</div>
+        <canvas id="winratePie" width="200" height="200" style="max-width:100%"></canvas>
+        <div id="winrateLegend" class="pie-legend small muted"></div>
+      </div>
+
+      <div style="flex:1" class="toggle-box small muted">
+        <label><input type="checkbox" id="showEMA" checked> EMA</label>
+        <label><input type="checkbox" id="showStoch" checked> Stochastic</label>
+        <label><input type="checkbox" id="showZones" checked> Supply/Demand</label>
+        <label><input type="checkbox" id="showAutoPattern" checked> Auto-Pattern</label>
+      </div>
+    </div>
+
+    <div style="margin-top:12px">
+      <label class="small muted">Scrib / Catatan (tersimpan lokal)</label>
+      <textarea id="scrib"></textarea>
+    </div>
+
+  </div>
+</section>
+
+<div class="grid">
+  <div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="kpi" id="kpis"></div>
+        <div class="small muted">Log: <span id="scanLog">—</span></div>
+      </div>
+      <div id="list" class="list" style="margin-top:12px"></div>
+    </div>
+
+    <div id="historyContainer" class="card" style="margin-top:12px;display:none">
+      <h3>History (Hidden)</h3>
+      <div id="historyContent" class="history muted"></div>
+    </div>
+  </div>
+
+  <div>
+    <div class="card">
+      <h3>Chart</h3>
+      <div id="chartContainer">
+        <div id="chart"></div>
+        <button id="fullscreenBtn" style="position:absolute;top:10px;right:10px;z-index:10;padding:6px 10px;background:#3b82f6;color:#fff;border:none;border-radius:8px;cursor:pointer;">⛶ Fullscreen</button>
+        <button id="closeFullscreenBtn" style="display:none;position:absolute;top:10px;right:10px;z-index:11;padding:6px 10px;background:#ef4444;color:#fff;border:none;border-radius:8px;cursor:pointer;">✖ Close</button>
+      </div>
+      <div id="indicatorChart"></div>
+      <div id="chartInfo" class="small muted" style="margin-top:8px"></div>
+      <div id="analysis" class="analysis small"></div>
+    </div>
+    <div class="card" style="margin-top:12px">
+      <h3>Logs</h3>
+      <div id="log" class="small muted" style="max-height:240px;overflow:auto;white-space:pre-wrap"></div>
+    </div>
+  </div>
+</div>
+
+<button id="historyTrigger" aria-hidden="true"></button>
+
+<div id="notifLayer" style="position:fixed;right:12px;bottom:12px;z-index:99999"></div>
+
+<div class="footer">DYOR. Jika fetch terblokir: jalankan lewat simple HTTP server (eg. `python -m http.server`).</div>
+</div>
+
+<!-- alarm audio -->
+<audio id="alarmAudio" src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" preload="auto"></audio>
+
+<script>
+/* ===========================
+   WRAP ENTIRE SCRIPT IN TRY/CATCH
+   to catch fatal parse/runtime errors and show them in #log
+   =========================== */
+try {
+
+// --------------------
+   /* Helpers, storage, UI */
+   // --------------------
+const DOM = s => document.querySelector(s);
+const fmt = (n,d=4)=> Number(n).toLocaleString('id-ID',{maximumFractionDigits:d});
+const HIST_KEY = 'zain_full_hist_final_v2';
+const SCRIB_KEY = 'zain_full_scrib_final_v2';
+
+function getHistory(){ try{ return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); }catch(e){ return []; } }
+function appendHistory(entry){ const h = getHistory(); h.push(entry); localStorage.setItem(HIST_KEY, JSON.stringify(h)); updateHiddenHistory(); }
+function updateHiddenHistory(){ const h = getHistory(); const el = DOM('#historyContent'); if(!el) return; if(!h || h.length===0) el.innerText='(history kosong)'; else el.innerText = h.map(it=>`${it.time} • ${it.symbol} • TF ${it.tf} • Result:${it.result}`).join('\\n'); }
+function loadScrib(){ DOM('#scrib') && (DOM('#scrib').value = localStorage.getItem(SCRIB_KEY) || ''); }
+loadScrib(); DOM('#scrib') && DOM('#scrib').addEventListener('change', ()=> localStorage.setItem(SCRIB_KEY, DOM('#scrib').value) );
+
+function logLine(msg){ const l = DOM('#log'); if(l){ l.innerText += new Date().toLocaleTimeString() + ' • ' + msg + '\\n'; l.scrollTop = l.scrollHeight; } DOM('#scanLog') && (DOM('#scanLog').innerText = msg); console.log(msg); }
+
+/* --------------------
+   Technical indicators (JS)
+   -------------------- */
+/* (same indicator functions as before) */
+function EMA(data,p){ let out=[], k=2/(p+1), prev=null; for(let i=0;i<data.length;i++){ prev = prev===null ? data[i] : (data[i]-prev)*k + prev; out.push(prev); } return out; }
+function SMA(data,p){ let out=[], s=0; for(let i=0;i<data.length;i++){ s+=data[i]; if(i>=p) s-=data[i-p]; out.push(i>=p-1? s/p : null); } return out; }
+function RSI(closes,p=14){ let out=Array(closes.length).fill(null), g=0,l=0; for(let i=1;i<closes.length;i++){ let d=closes[i]-closes[i-1], gg=Math.max(d,0), ll=Math.max(-d,0); if(i<=p){ g+=gg; l+=ll; if(i===p){ let rs=g/Math.max(l,1e-9); out[i]=100-100/(1+rs); } } else { g=(g*(p-1)+gg)/p; l=(l*(p-1)+ll)/p; let rs=g/Math.max(l,1e-9); out[i]=100-100/(1+rs); } } return out; }
+function ATR(highs,lows,closes,p=14){
+  const trs = [];
+  for(let i=0;i<closes.length;i++){
+    if(i===0){ trs.push(highs[i]-lows[i]); continue; }
+    const tr = Math.max(highs[i]-lows[i], Math.abs(highs[i]-closes[i-1]), Math.abs(lows[i]-closes[i-1]));
+    trs.push(tr);
+  }
+  const out = []; let s=0;
+  for(let i=0;i<trs.length;i++){ s+=trs[i]; if(i>=p) s-=trs[i-p]; out.push(i>=p-1 ? s/p : null); }
+  return out;
+}
+function stochasticK(closes,k=14,d=3){
+  const K = Array(closes.length).fill(null), D = Array(closes.length).fill(null);
+  for(let i=0;i<closes.length;i++){
+    const start = Math.max(0, i-k+1);
+    const low = Math.min(...closes.slice(start,i+1));
+    const high = Math.max(...closes.slice(start,i+1));
+    K[i] = (high - low) < 1e-9 ? 50 : 100 * (closes[i] - low) / (high - low);
+  }
+  for(let i=0;i<closes.length;i++){
+    const start = Math.max(0, i-d+1);
+    const slice = K.slice(start, i+1).filter(v=>v!==null);
+    D[i] = slice.length ? (slice.reduce((a,b)=>a+b,0)/slice.length) : null;
+  }
+  return {K,D};
+}
+
+/* --------------------
+   Pattern detection helpers
+   -------------------- */
+function findSwings(highs, lows, lookback=2){
+  const swings = [];
+  for(let i=lookback;i<highs.length-lookback;i++){
+    if(highs[i] > highs[i-1] && highs[i] > highs[i+1]) swings.push({type:'high', idx:i, price:highs[i]});
+    if(lows[i]  < lows[i-1]  && lows[i]  < lows[i+1]) swings.push({type:'low', idx:i, price:lows[i]});
+  }
+  return swings;
+}
+
+/* --------------------
+   State
+   -------------------- */
+const storeBySymbol = new Map();
+const signals = new Map(); // map symbol -> { state: 'waiting'|'open'|'win'|'loss' }
+let abort = false;
+let autoInterval = null;
+
+/* --------------------
+   Custom per-coin pie (replacement for donut)
+   -------------------- */
+function hexToRgba(hex, alpha){
+  try{
+    const c = hex.replace('#','');
+    const bigint = parseInt(c,16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return 'rgba('+r+','+g+','+b+','+alpha+')';
+  }catch(e){
+    return 'rgba(158,158,158,'+alpha+')';
+  }
+}
+
+function initPie(){
+  try{ updatePie(); }catch(e){ logLine('initPie err: '+(e && e.message?e.message:e)); }
+}
+
+// draw pie excluding coins with state 'queue' (we will skip queue)
+function updatePie(dummy){
+  try{
+    const canvas = DOM('#winratePie');
+    const legend = DOM('#winrateLegend');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    // only include coins that we want to show: exclude queue
+    const coins = Array.from(storeBySymbol.keys()).filter(sym=>{
+      const s = signals.get(sym);
+      if(!s) return true; // default include
+      return String(s.state).toLowerCase() !== 'queue';
+    });
+    const slices = [];
+    const statusColor = { waiting: '#6b7280', win: '#16a34a', loss: '#ef4444' };
+    for(const sym of coins){
+      const stObj = signals.get(sym);
+      const st = stObj ? (stObj.state || 'waiting') : 'waiting';
+      let status = 'waiting';
+      if(st === 'win') status = 'win';
+      else if(st === 'loss') status = 'loss';
+      else status = 'waiting';
+      slices.push({ symbol: sym, status, color: statusColor[status] || '#9ca3af' });
+    }
+    const DPR = window.devicePixelRatio || 1;
+    const W = canvas.clientWidth * DPR || 200 * DPR;
+    const H = W;
+    canvas.width = W; canvas.height = H;
+    ctx.clearRect(0,0,W,H);
+    const cx = W/2, cy = H/2, r = Math.min(W,H)/2 * 0.9;
+    if(slices.length === 0){
+      ctx.fillStyle = '#0b1726';
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#9fb0c8';
+      ctx.font = (14*DPR)+'px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('No Data', cx, cy);
+      if(legend) legend.innerHTML = '<div class="muted">No coins scanned yet</div>';
+      return;
+    }
+    let start = -Math.PI/2;
+    const sliceAngle = Math.PI * 2 / slices.length;
+    if(legend) legend.innerHTML = '';
+    for(let i=0;i<slices.length;i++){
+      const s = slices[i];
+      const end = start + sliceAngle;
+      ctx.beginPath();
+      ctx.moveTo(cx,cy);
+      ctx.arc(cx,cy,r,start,end);
+      ctx.closePath();
+      ctx.fillStyle = hexToRgba(s.color, 0.85);
+      ctx.fill();
+      ctx.strokeStyle = '#071024';
+      ctx.lineWidth = Math.max(2, DPR);
+      ctx.stroke();
+      const mid = (start + end)/2;
+      const lx = cx + Math.cos(mid) * (r*0.5);
+      const ly = cy + Math.sin(mid) * (r*0.5);
+      ctx.fillStyle = '#e6f2ff';
+      ctx.font = Math.max(10, 12 * DPR) + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(s.symbol.replace(/USDT$/,''), lx, ly);
+      if(legend) {
+        const badge = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><div style="width:12px;height:12px;border-radius:3px;background:'+s.color+'"></div><div style="flex:1"><strong>'+s.symbol+'</strong><div class="small muted">'+s.status.toUpperCase()+'</div></div></div>';
+        legend.innerHTML += badge;
+      }
+      start = end;
+    }
+  }catch(e){
+    logLine('updatePie err: '+(e && e.message?e.message:e));
+  }
+}
+
+/* --------------------
+   Fetch wrapper
+   -------------------- */
+async function fetchJson(url){
+  const r = await fetch(url);
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return await r.json();
+}
+
+/* --------------------
+   Core analysis: analyzeSymbol (kept intact)
+   -------------------- */
+async function analyzeSymbol(symbol, tf='1h', limit=500){
+  try{
+    const atrPeriod = Math.max(2, parseInt(DOM('#atrPeriod')?DOM('#atrPeriod').value:14 || 14));
+    const srCandles = Math.max(20, Math.min(500, parseInt(DOM('#srCandles')?DOM('#srCandles').value:100 || 100)));
+    const tp1Offset = parseFloat(DOM('#tp1Offset')?DOM('#tp1Offset').value:0.2 || 0.2);
+    const tp2Offset = parseFloat(DOM('#tp2Offset')?DOM('#tp2Offset').value:0.1 || 0.1);
+    const tp3Offset = parseFloat(DOM('#tp3Offset')?DOM('#tp3Offset').value:0.0 || 0.0);
+
+    const interval = mapTfToBinance(tf);
+    const url = `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=${Math.max(limit, srCandles+50)}`;
+    const raw = await fetchJson(url);
+    if(!Array.isArray(raw) || raw.length < Math.max(atrPeriod + 10, srCandles + 5)) return null;
+
+    const opens = raw.map(r => +r[1]);
+    const highs = raw.map(r => +r[2]);
+    const lows  = raw.map(r => +r[3]);
+    const closes= raw.map(r => +r[4]);
+    const vols  = raw.map(r => +r[5]||0);
+    const times = raw.map(r => Math.floor(r[0]/1000));
+
+    // indicators
+    const atrSeries = ATR(highs,lows,closes,atrPeriod);
+    const atrLast = atrSeries.at(-1) || 0;
+    const ema34 = EMA(closes,34);
+    const ema90 = EMA(closes,90);
+    const stoch = stochasticK(closes,5,3);
+    const rsi14 = RSI(closes,14);
+
+    // supply/demand
+    const look = srCandles;
+    const lastSliceHighs = highs.slice(-look);
+    const lastSliceLows = lows.slice(-look);
+    const highSR = Math.max(...lastSliceHighs);
+    const lowSR  = Math.min(...lastSliceLows);
+
+    // determine simple side/score (same heuristic as before, adapted)
+    const idx = closes.length - 2; // entry considered at previous closed candle
+    const entryPrice = closes[idx];
+    const emaTrend = ema34[idx] > ema90[idx] ? 'up' : 'down';
+    let score = 0;
+    if(emaTrend === 'up') score += 2; else score -= 2;
+
+    const stVal = stoch.K[idx] || 50;
+    if(stVal < 30 && emaTrend==='up') score += 1;
+    if(stVal > 70 && emaTrend==='down') score -= 1;
+
+    if(rsi14[idx] < 35 && emaTrend==='up') score += 1;
+    if(rsi14[idx] > 65 && emaTrend==='down') score -= 1;
+    
+    const signal = (score >= 2) ? 'long' : (score <= -2 ? 'short' : 'queue');
+
+    // SL/TP by ATR + SR
+    let slPrice, tp1, tp2, tp3;
+    if(signal === 'long'){
+      slPrice = entryPrice - atrLast;
+      tp1 = highSR - (tp1Offset * atrLast);
+      tp2 = highSR - (tp2Offset * atrLast);
+      tp3 = highSR - (tp3Offset * atrLast);
+    } else if(signal === 'short'){
+      slPrice = entryPrice + atrLast;
+      tp1 = lowSR + (tp1Offset * atrLast);
+      tp2 = lowSR + (tp2Offset * atrLast);
+      tp3 = lowSR + (tp3Offset * atrLast);
+    } else {
+      slPrice = entryPrice - atrLast;
+      tp1 = entryPrice + atrLast;
+      tp2 = entryPrice + atrLast*1.5;
+      tp3 = entryPrice + atrLast*2;
+    }
+
+    const rrr = calcRRR(entryPrice, slPrice, tp2);
+
+    // pattern detection: find swings and form channel lines
+    const swings = findSwings(highs, lows, 2);
+
+    // forward-scan for immediate TP/SL hits (historical)
+    let result = null;
+    for(let i = idx + 1; i <= closes.length - 1; i++){
+      const h = highs[i], l = lows[i];
+      let tpHit = false, tpLevel = null;
+      if(signal === 'long'){
+        if(h >= tp3){ tpHit = true; tpLevel = 'TP3'; }
+        else if(h >= tp2){ tpHit = true; tpLevel = 'TP2'; }
+        else if(h >= tp1){ tpHit = true; tpLevel = 'TP1'; }
+      } else if(signal === 'short'){
+        if(l <= tp3){ tpHit = true; tpLevel = 'TP3'; }
+        else if(l <= tp2){ tpHit = true; tpLevel = 'TP2'; }
+        else if(l <= tp1){ tpHit = true; tpLevel = 'TP1'; }
+      }
+      const slHit = (signal === 'long') ? (l <= slPrice) : (signal === 'short' ? (h >= slPrice) : false);
+      if(tpHit && !slHit){ result = { type:'TP', level: tpLevel, idx:i, time: times[i]}; break; }
+      if(slHit && !tpHit){ result = { type:'SL', idx:i, time: times[i]}; break; }
+      if(tpHit && slHit){
+        if(closes[i] >= opens[i]) result = { type:'TP', level: tpLevel, idx:i, time: times[i] };
+        else result = { type:'SL', idx:i, time: times[i] };
+        break;
+      }
+    }
+
+    const accEst = Math.round(Math.min(98, Math.max(30, 50 + (score * 8))));
+    return {
+      symbol, tf, entryIndex: idx, entryPrice, sl: slPrice,
+      tp1, tp2, tp3, rrr, signal, score, acc: accEst,
+      opens, highs, lows, closes, vols, times, ema34, ema90, stoch, rsi14, atrSeries, highSR, lowSR, swings, result
+    };
+  }catch(e){
+    console.warn('analyzeSymbol', symbol, e);
+    return null;
+  }
+}
+
+/* --------------------
+   RRR util
+   -------------------- */
+function calcRRR(entry, stop, tp){ const risk = Math.abs(entry - stop); const reward = Math.abs(tp - entry); if(risk <= 0) return null; return reward / risk; }
+function mapTfToBinance(tf){ const m = {'1m':'1m','5m':'5m','15m':'15m','30m':'30m','1h':'1h','4h':'4h','1d':'1d'}; return m[tf] || '1h'; }
+
+/* --------------------
+   UI rendering: list cards (skip 'queue' signals)
+   -------------------- */
+function pillClass(s){ if(s==='long') return 'pill long'; if(s==='short') return 'pill short'; if(s==='queue') return 'pill.queue'; return 'pill neutral'; }
+function riskBadge(label){ if(label==='LOW') return `<span class="risk-low">Low</span>`; if(label==='MED') return `<span class="risk-med">Med</span>`; return `<span class="risk-high">High</span>`; }
+
+function renderCard(item){
+  // do not render signals that are 'queue'
+  if(String(item.signal).toLowerCase() === 'queue') return;
+  const el = DOM('#list');
+  const div = document.createElement('div'); div.className='coin';
+  const riskLabel = item.acc > 85 ? 'LOW' : (item.acc > 75 ? 'MED' : 'HIGH');
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <strong>${item.symbol}</strong>
+      <span style="display:flex;align-items:center;gap:8px">
+        ${riskBadge(riskLabel)}
+        <span class="${pillClass(item.signal)}">${item.signal.toUpperCase()}</span>
+        <span class="exchange-badge">Binance</span>
+      </span>
+    </div>
+    <div class="small">Entry: ${fmt(item.entryPrice)} • Score: ${fmt(item.score,2)} • Acc: ${item.acc}%</div>
+    <div class="signal-desc">SL: ${fmt(item.sl)} • TP1: ${fmt(item.tp1)} • TP2: ${fmt(item.tp2)} • TP3: ${fmt(item.tp3)}</div>
+    <div style="display:flex;gap:8px;margin-top:6px;">
+      <div class="link" data-s="${item.symbol}">Lihat chart</div>
+      <div class="link" data-k="${item.symbol}">Keterangan</div>
+    </div>
+  `;
+  const kbox = document.createElement('div'); kbox.className='keterangan-inline'; kbox.style.display='none';
+  div.appendChild(kbox);
+
+  div.querySelector('[data-s]').onclick = (e)=>{ e.stopPropagation(); loadChartBySymbol(item.symbol); stopKlineSocket(); startKlineSocket(item.symbol, item.tf || '1h'); };
+  div.querySelector('[data-k]').onclick = (e)=>{ e.stopPropagation(); toggleKeteranganInline(item.symbol, kbox); };
+
+  el.appendChild(div);
+}
+
+/* --------------------
+   Keterangan & MM (unchanged)
+   -------------------- */
+function buildKeteranganText(item){
+  const mm = {label: item.tf || '1h', sl: '—', tp1:'—', tp2:'—', tp3:'—'};
+  const rrr = item.rrr ? (item.rrr.toFixed ? item.rrr.toFixed(2) : item.rrr) : '-';
+  const mmTable = `
+    <table class="mm-table">
+      <tr><th colspan="5">TF ${mm.label.toUpperCase()}</th></tr>
+      <tr><th>Level</th><th>Harga (Px)</th><th>RRR</th><th>Keterangan</th></tr>
+      <tr><td>SL</td><td>${fmt(item.sl)}</td><td>-</td><td>Stop Loss</td></tr>
+      <tr><td>TP1</td><td>${fmt(item.tp1)}</td><td>—</td><td>Partial</td></tr>
+      <tr><td>TP2</td><td>${fmt(item.tp2)}</td><td>—</td><td>Main</td></tr>
+      <tr><td>TP3</td><td>${fmt(item.tp3)}</td><td>—</td><td>Runner</td></tr>
+    </table>
+  `;
+  const txt = `Entry: ${fmt(item.entryPrice)} • SL: ${fmt(item.sl)} • TP1: ${fmt(item.tp1)} • TP2: ${fmt(item.tp2)} • TP3: ${fmt(item.tp3)}
+TF: ${item.tf} | Signal: ${item.signal} | Acc: ${item.acc}%
+Score: ${item.score}
+`;
+  return { mmTable, txt };
+}
+
+function formatPct(v){ return isFinite(v) ? ( (Math.abs(v)*100).toFixed(2) + '%' ) : '—'; }
+function recommendTFByATR(item){
+  try{
+    const atr = (item.atrSeries && item.atrSeries.length) ? item.atrSeries[item.atrSeries.length-1] : null;
+    if(!atr) return '1h';
+    const price = item.entryPrice || (item.closes && item.closes.at(-1)) || 1;
+    const rel = atr / price;
+    if(rel < 0.0005) return '15m';
+    if(rel < 0.002) return '1h';
+    if(rel < 0.01) return '4h';
+    return '1d';
+  }catch(e){ return '1h'; }
+}
+
+function longLocalReasonVerbose(item){
+  try{
+    const parts = [];
+    parts.push(`Sinyal ${item.signal.toUpperCase()} terdeteksi pada ${item.symbol} (TF ${item.tf}).`);
+    const ema34 = item.ema34 && item.ema34.length ? item.ema34[item.ema34.length-1] : null;
+    const ema90 = item.ema90 && item.ema90.length ? item.ema90[item.ema90.length-1] : null;
+    if(ema34 && ema90){
+      if(ema34 > ema90) parts.push('EMA34 berada di atas EMA90 yang menunjukan trend naik.');
+      else parts.push('EMA34 berada di bawah EMA90 yang menunjukan trend turun.');
+    }
+    const st = item.stoch && item.stoch.K && item.stoch.K.length ? item.stoch.K[item.stoch.K.length-1] : null;
+    const rsi = item.rsi14 && item.rsi14.length ? item.rsi14[item.rsi14.length-1] : null;
+    if(st !== null) parts.push(`Stochastic K sekitar ${st.toFixed(1)} menunjukkan momentum ${ st>70 ? 'overbought' : st<30 ? 'oversold' : 'netral' }.`);
+    if(rsi !== null) parts.push(`RSI ${rsi.toFixed(1)} memperkuat sinyal sebagai ${ rsi>60 ? 'kekuatan kenaikan' : rsi<40 ? 'kelemahan' : 'netral' }.`);
+    const atr = item.atrSeries && item.atrSeries.length ? item.atrSeries[item.atrSeries.length-1] : null;
+    if(atr) parts.push(`ATR terakhir ${atr.toFixed(6)} menandakan volatilitas ${ atr > (item.entryPrice*0.005) ? 'tinggi' : 'normal' }.`);
+    parts.push(`Zona SR utama: high ${fmt(item.highSR,6)} / low ${fmt(item.lowSR,6)}.`);
+    if(item.swings && item.swings.length>0) parts.push('Polanya menunjukkan swing yang bisa menjadi area konfirmasi jika harga menembus zona tersebut.');
+    const recTF = recommendTFByATR(item);
+    parts.push(`Rekomendasi timeframe untuk eksekusi: ${recTF}. Sesuaikan ukuran posisi karena estimasi akurasi ${item.acc}%.`);
+    let out = parts.join(' ');
+    if(out.split(/\s+/).length < 30){
+      out = out + ' Perhatikan juga berita pasar dan likuiditas sebelum masuk posisi.';
+    }
+    return out;
+  }catch(e){ return simpleLocalReason(item); }
+}
+
+function computeRRRPercent(entry, level){
+  if(!isFinite(entry) || !isFinite(level) || entry === 0) return null;
+  return Math.abs(level - entry) / entry;
+}
+
+function toggleKeteranganInline(symbol, container){
+  const item = storeBySymbol.get(symbol);
+  if(!item) return alert('Data belum tersedia, jalankan scan ulang.');
+  if(container.style.display === 'none' || container.innerHTML.trim()===''){
+    const rrr1 = computeRRRPercent(item.entryPrice, item.sl);
+    const rrr_tp1 = computeRRRPercent(item.entryPrice, item.tp1);
+    const rrr_tp2 = computeRRRPercent(item.entryPrice, item.tp2);
+    const rrr_tp3 = computeRRRPercent(item.entryPrice, item.tp3);
+    const recTF = recommendTFByATR(item);
+    const mmTable = `
+      <table class="mm-table">
+        <tr><th colspan="6">TF ${ (item.tf||'1h').toUpperCase() } — Money Management</th></tr>
+        <tr><th>Level</th><th>Harga (Px)</th><th>RRR (ratio)</th><th>RRR (%)</th><th>Keterangan</th></tr>
+        <tr><td>Entry</td><td>${fmt(item.entryPrice)}</td><td>—</td><td>—</td><td>Harga masuk</td></tr>
+        <tr><td>SL</td><td>${fmt(item.sl)}</td><td>${ rrr1 ? ( (Math.abs(item.entryPrice - item.sl)/Math.abs(item.entryPrice - item.sl)).toFixed(2) ) : '—' }</td><td>${ rrr1 ? formatPct(rrr1) : '—' }</td><td>Stop Loss</td></tr>
+        <tr><td>TP1</td><td>${fmt(item.tp1)}</td><td>${ rrr_tp1 ? rrr_tp1.toFixed(2) : '—' }</td><td>${ rrr_tp1 ? formatPct(rrr_tp1) : '—' }</td><td>Partial</td></tr>
+        <tr><td>TP2</td><td>${fmt(item.tp2)}</td><td>${ rrr_tp2 ? rrr_tp2.toFixed(2) : '—' }</td><td>${ rrr_tp2 ? formatPct(rrr_tp2) : '—' }</td><td>Main</td></tr>
+        <tr><td>TP3</td><td>${fmt(item.tp3)}</td><td>${ rrr_tp3 ? rrr_tp3.toFixed(2) : '—' }</td><td>${ rrr_tp3 ? formatPct(rrr_tp3) : '—' }</td><td>Runner</td></tr>
+        <tr><td colspan="6">Rekomendasi TF: ${recTF} (berdasarkan ATR dan volatilitas)</td></tr>
+      </table>
+    `;
+
+    const reason = longLocalReasonVerbose(item);
+
+    const txt = `Entry: ${fmt(item.entryPrice)} • SL: ${fmt(item.sl)} • TP1: ${fmt(item.tp1)} • TP2: ${fmt(item.tp2)} • TP3: ${fmt(item.tp3)}
+TF: ${item.tf} | Signal: ${item.signal} | Acc: ${item.acc}%
+Score: ${item.score}
+`;
+
+    container.innerHTML = `
+      <div class="keterangan-header" style="display:flex;justify-content:space-between;align-items:center">
+        <strong>Keterangan & MM — ${symbol}</strong>
+        <div>
+          <button class="copy-btn" id="copy-${symbol}">Copy</button>
+          <button class="copy-btn" id="save-${symbol}">Simpan History</button>
+        </div>
+      </div>
+      ${mmTable}
+      <div class="hr"></div>
+      <div class="keterangan-pre" id="reason-${symbol}">${reason}</div>
+      <div class="hr"></div>
+      <div class="keterangan-pre">${txt}</div>
+    `;
+
+    container.style.display = 'block';
+    document.getElementById(`copy-${symbol}`).onclick = async ()=>{ try{ await navigator.clipboard.writeText(container.innerText); alert('Disalin ke clipboard'); }catch(e){ alert('Gagal menyalin'); } };
+    document.getElementById(`save-${symbol}`).onclick = ()=>{ appendHistory({ time: new Date().toISOString(), symbol, tf: item.tf, result: item.result ? item.result.type : 'open' }); alert('Disimpan ke history'); };
+  } else { container.style.display='none'; container.innerHTML=''; }
+}
+
+/* --------------------
+   Charting & chart helpers
+   -------------------- */
+let chart = null, candleSeries=null, ema34Series=null, ema90Series=null, priceLines=[], indicatorChart=null, volumeSeries=null, stochKSeries=null, stochDSeries=null;
+function initChartsIfNeeded(){
+  if(!chart){
+    const chartEl = DOM('#chart');
+    chart = LightweightCharts.createChart(chartEl, {
+      width: chartEl.clientWidth,
+      height: 360,
+      layout: { backgroundColor: '#071024', textColor: '#cfeefc' },
+      rightPriceScale:{borderVisible:false},
+      timeScale:{borderVisible:false}
+    });
+    candleSeries = chart.addCandlestickSeries({
+      upColor: '#16a34a', downColor:'#ef4444', borderVisible:false, wickUpColor:'#16a34a', wickDownColor:'#ef4444'
+    });
+    ema34Series = chart.addLineSeries({ color:'#38bdf8', lineWidth:2 });
+    ema90Series = chart.addLineSeries({ color:'#06b6d4', lineWidth:2 });
+  }
+  if(!indicatorChart){
+    const indEl = DOM('#indicatorChart');
+    indicatorChart = LightweightCharts.createChart(indEl, {
+      width: indEl.clientWidth,
+      height: 120,
+      layout: { backgroundColor: '#071024', textColor: '#cfeefc' },
+      rightPriceScale:{visible:false},
+      timeScale:{borderVisible:false}
+    });
+    volumeSeries = indicatorChart.addHistogramSeries({
+      color: '#26a69a',
+      priceFormat: { type: 'volume' },
+      priceScaleId: '',
+      scaleMargins: { top: 0.1, bottom: 0 }
+    });
+    stochKSeries = indicatorChart.addLineSeries({ color: '#22c55e', lineWidth: 2, priceScaleId: '' });
+    stochDSeries = indicatorChart.addLineSeries({ color: '#f97316', lineWidth: 2, priceScaleId: '' });
+  }
+}
+
+function clearPriceLines(){
+  for(const p of priceLines){ try{ candleSeries.removePriceLine(p);}catch{} }
+  priceLines = [];
+}
+function recreateCharts(){
+  try{ if(chart) chart.remove(); }catch(e){}
+  try{ if(indicatorChart) indicatorChart.remove(); }catch(e){}
+  chart = null; indicatorChart = null; candleSeries=null; ema34Series=null; ema90Series=null; priceLines=[]; volumeSeries=null; stochKSeries=null; stochDSeries=null;
+  initChartsIfNeeded();
+}
+
+/* --------------------
+   Multi-TF analyzer + WebSocket kline
+   -------------------- */
+async function analyzeMultiTf(symbol, tfs=['1h']){
+  const results = [];
+  for(const tf of tfs){
+    const res = await analyzeSymbol(symbol, tf, 500);
+    if(res) results.push(res);
+  }
+  if(results.length === 0) return null;
+
+  let finalSignal = 'queue';
+  if(results.length > 1){
+    const dirs = results.map(r => r.signal);
+    const allLong = dirs.every(d => d==='long');
+    const allShort = dirs.every(d => d==='short');
+    if(allLong) finalSignal = 'long';
+    if(allShort) finalSignal = 'short';
+  } else {
+    finalSignal = results[0].signal;
+  }
+
+  const main = results[0];
+  main.multi = results;
+  main.signal = finalSignal;
+  return main;
+}
+
+let _klineSocket = null;
+let _activeKlineSymbol = null;
+let _activeKlineTf = null;
+
+function stopKlineSocket(){
+  if(_klineSocket){ try{ _klineSocket.close(); }catch(e){} _klineSocket = null; _activeKlineSymbol = null; _activeKlineTf = null; logLine('Kline socket stopped'); }
+}
+
+function startKlineSocket(symbol, tf){
+  try{
+    if(_klineSocket && _activeKlineSymbol===symbol && _activeKlineTf===tf) return;
+    stopKlineSocket();
+    const interval = mapTfToBinance(tf);
+    const stream = `${symbol.toLowerCase()}@kline_${interval}`;
+    const url = `wss://fstream.binance.com/ws/${stream}`;
+    _klineSocket = new WebSocket(url);
+    _activeKlineSymbol = symbol;
+    _activeKlineTf = tf;
+    logLine('Opening kline socket ' + stream);
+
+    _klineSocket.onmessage = (evt)=>{
+      try{
+        const payload = JSON.parse(evt.data);
+        if(!payload || !payload.k) return;
+        const k = payload.k;
+        const start = Math.floor(k.t/1000);
+        const open = +k.o, high = +k.h, low = +k.l, close = +k.c;
+        const isFinal = !!k.x;
+
+        const point = { time: start, open, high, low, close };
+        if(candleSeries){
+          try{ candleSeries.update(point); }catch(e){ /* ignore */ }
+        }
+
+        const item = storeBySymbol.get(symbol);
+        if(item){
+          if(isFinal){
+            item.times.push(start); item.opens.push(open); item.highs.push(high); item.lows.push(low); item.closes.push(close);
+          } else {
+            const li = item.times.length - 1;
+            if(li>=0 && item.times[li]===start){
+              item.opens[li]=open; item.highs[li]=high; item.lows[li]=low; item.closes[li]=close;
+            } else {
+              item.times.push(start); item.opens.push(open); item.highs.push(high); item.lows.push(low); item.closes.push(close);
+            }
+          }
+          item.ema34 = EMA(item.closes,34);
+          item.ema90 = EMA(item.closes,90);
+          item.stoch = stochasticK(item.closes,5,3);
+          item.rsi14 = RSI(item.closes,14);
+          item.atrSeries = ATR(item.highs, item.lows, item.closes, Math.max(2, parseInt(DOM('#atrPeriod').value||14)));
+        }
+
+        if(item){
+          DOM('#chartInfo').innerText = `${symbol} • Entry ${fmt(item.entryPrice)} • SL ${fmt(item.sl)} • TP1 ${fmt(item.tp1)} • TP2 ${fmt(item.tp2)}`;
+          DOM('#analysis').innerText = `Score: ${item.score} • Acc ${item.acc}% • Side: ${item.signal} • Live kline ${isFinal ? 'closed' : 'updating'}`;
+        } else {
+          DOM('#chartInfo').innerText = `${symbol} • Live kline ${isFinal ? 'closed' : 'updating'}`;
+        }
+
+      }catch(err){ console.warn('kline ws parse err', err); }
+    };
+
+    _klineSocket.onopen = ()=>{ logLine('Kline WS connected'); };
+    _klineSocket.onclose = ()=>{ logLine('Kline WS closed'); _klineSocket = null; _activeKlineSymbol=null; _activeKlineTf=null; };
+    _klineSocket.onerror = (e)=>{ console.warn('kline ws err', e); };
+  }catch(e){ console.warn('startKlineSocket err', e); }
+}
+
+/* --------------------
+   loadChartBySymbol (unchanged)
+   -------------------- */
+function loadChartBySymbol(symbol){
+  const item = storeBySymbol.get(symbol);
+  if(!item) return alert('Data belum tersedia, jalankan scan ulang.');
+  recreateCharts();
+
+  const d = item.closes.map((c,i)=> ({ time: Math.floor(item.times[i]), open: item.opens[i], high: item.highs[i], low: item.lows[i], close: item.closes[i] }) );
+  candleSeries.setData(d);
+
+  const ema34Data = item.ema34.map((v,i)=> v? { time: Math.floor(item.times[i]), value: v } : null).filter(Boolean);
+  const ema90Data = item.ema90.map((v,i)=> v? { time: Math.floor(item.times[i]), value: v } : null).filter(Boolean);
+  if(ema34Data.length) ema34Series.setData(ema34Data);
+  if(ema90Data.length) ema90Series.setData(ema90Data);
+
+  const volumeData = item.vols.map((v,i)=> ({ time: Math.floor(item.times[i]), value: v, color: item.closes[i] >= item.opens[i] ? '#16a34a' : '#ef4444' }));
+  volumeSeries.setData(volumeData);
+
+  const stK = item.stoch.K.map((v,i)=> v !== null ? { time: Math.floor(item.times[i]), value: v } : null).filter(Boolean);
+  const stD = item.stoch.D.map((v,i)=> v !== null ? { time: Math.floor(item.times[i]), value: v } : null).filter(Boolean);
+  if(DOM('#showStoch').checked){
+    stochKSeries.setData(stK);
+    stochDSeries.setData(stD);
+  } else {
+    stochKSeries.setData([]);
+    stochDSeries.setData([]);
+  }
+
+  candleSeries.createPriceLine({ price: item.sl, color:'#ef4444', lineWidth:1, axisLabelVisible:true, title:'SL' });
+  if(item.tp1) candleSeries.createPriceLine({ price: item.tp1, color:'#a7f3d0', lineWidth:1, title:'TP1' });
+  if(item.tp2) candleSeries.createPriceLine({ price: item.tp2, color:'#6ee7b7', lineWidth:1, title:'TP2' });
+  if(item.tp3) candleSeries.createPriceLine({ price: item.tp3, color:'#22c55e', lineWidth:1, title:'TP3' });
+
+  if(DOM('#showZones').checked){
+    const look = Math.max(20, parseInt(DOM('#srCandles').value || 100));
+    const highSR = item.highSR;
+    const lowSR = item.lowSR;
+    const supplySeries = chart.addLineSeries({ color: 'rgba(239,68,68,0.18)', lineWidth: 30, lastValueVisible: false });
+    const demandSeries = chart.addLineSeries({ color: 'rgba(34,197,94,0.18)', lineWidth: 30, lastValueVisible: false });
+    supplySeries.setData([{ time: Math.floor(item.times[item.times.length - look] || item.times[0]), value: highSR }, { time: Math.floor(item.times[item.times.length-1]), value: highSR }]);
+    demandSeries.setData([{ time: Math.floor(item.times[item.times.length - look] || item.times[0]), value: lowSR }, { time: Math.floor(item.times[item.times.length-1]), value: lowSR }]);
+  }
+
+  if(DOM('#showAutoPattern').checked && item.swings){
+    const highs = item.swings.filter(s=>s.type==='high');
+    const lows = item.swings.filter(s=>s.type==='low');
+    if(highs.length >= 2){
+      const h1 = highs[highs.length-2], h2 = highs[highs.length-1];
+      const s1 = chart.addLineSeries({ color:'rgba(255,200,60,0.95)', lineStyle:2, lineWidth:1 });
+      s1.setData([{ time: Math.floor(item.times[h1.idx]), value: h1.price }, { time: Math.floor(item.times[h2.idx]), value: h2.price }]);
+    }
+    if(lows.length >= 2){
+      const l1 = lows[lows.length-2], l2 = lows[lows.length-1];
+      const s2 = chart.addLineSeries({ color:'rgba(60,200,255,0.95)', lineStyle:2, lineWidth:1 });
+      s2.setData([{ time: Math.floor(item.times[l1.idx]), value: l1.price }, { time: Math.floor(item.times[l2.idx]), value: l2.price }]);
+    }
+  }
+
+  DOM('#chartInfo').innerText = `${symbol} • Entry ${fmt(item.entryPrice)} • SL ${fmt(item.sl)} • TP1 ${fmt(item.tp1)} • TP2 ${fmt(item.tp2)}`;
+  DOM('#analysis').innerText = `Score: ${item.score} • Acc ${item.acc}% • Side: ${item.signal}`;
+}
+
+/* --------------------
+   Scan & Auto-monitor (main loop) - with queue skipping
+   -------------------- */
+DOM('#startBtn').addEventListener('click', ()=>{ DOM('#startBtn').disabled = true; startScan(true); });
+DOM('#stopBtn').addEventListener('click', ()=>{ stopScan(); DOM('#startBtn').disabled = false; DOM('#status').innerText = 'Stopped'; });
+DOM('#clearHistBtn').addEventListener('click', ()=>{ if(confirm('Kosongkan history?')){ localStorage.removeItem(HIST_KEY); updateHiddenHistory(); logLine('History cleared'); } });
+DOM('#exportBtn').addEventListener('click', ()=>{ const h = getHistory(); const blob = new Blob([JSON.stringify(h,null,2)], { type:'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'zain_history.json'; a.click(); URL.revokeObjectURL(a.href); });
+
+async function startScan(enableAuto=false){
+  try{
+    abort = false;
+    DOM('#status').innerText = 'Scanning...'; logLine('Scan start (Binance)');
+    initPie();
+    DOM('#list').innerHTML = '';
+    storeBySymbol.clear();
+    signals.clear();
+
+    const tfSel = DOM('#tf') ? [...DOM('#tf').selectedOptions].map(o=>o.value) : ['1h'];
+    const tfs = tfSel.length ? tfSel : ['1h'];
+    const topN = Math.max(5, Math.min(200, +DOM('#topN').value || 40));
+    const autoMinutes = Math.max(1, Math.min(60, parseInt(DOM('#autoMin').value || 7)));
+    const AUTO_INTERVAL_MS = autoMinutes * 60 * 1000;
+
+    let mergedTickers = [];
+    try{
+      const bin = await fetchJson('https://fapi.binance.com/fapi/v1/ticker/24hr');
+      if(Array.isArray(bin)){
+        mergedTickers = bin.filter(t=>t.symbol && t.symbol.endsWith('USDT')).map(t=>({symbol:t.symbol,lastPrice:+t.lastPrice,quoteVolume:+t.quoteVolume,priceChangePercent:+t.priceChangePercent}));
+      }
+    }catch(e){ logLine('Primary ticker fetch failed: ' + e.message); }
+
+    if(!mergedTickers || mergedTickers.length===0){
+      DOM('#status').innerText = 'Fetch tickers failed';
+      DOM('#startBtn').disabled = false;
+      return;
+    }
+
+    mergedTickers.sort((a,b)=> (b.quoteVolume||0)-(a.quoteVolume||0));
+    const coins = mergedTickers.slice(0, topN);
+
+    for(const c of coins){
+      if(abort) break;
+      const symbol = c.symbol;
+      try{
+        const item = await analyzeMultiTf(symbol, tfs);
+        if(!item){ logLine(`${symbol}: insufficient data or error`); continue; }
+        // skip if signal is 'queue'
+        if(String(item.signal).toLowerCase() === 'queue'){ logLine(`${symbol} skipped (signal QUEUE)`); continue; }
+        if(item.acc < 70){ logLine(`${symbol} skipped (acc ${item.acc}% < 70)`); continue; }
+
+        storeBySymbol.set(symbol, item);
+        signals.set(symbol, { state: 'waiting' }); // default waiting/open
+
+        // initial immediate result (from historical candles)
+        if(item.result){
+          const resultLabel = item.result.type === 'TP' ? (item.result.level || 'TP') : 'SL';
+          appendHistory({ time: new Date().toISOString(), symbol, tf: item.tf, result: resultLabel });
+          signals.set(symbol, { state: item.result.type === 'TP' ? 'win' : 'loss' });
+          showNotif(symbol, item.result.type === 'TP' ? 'tp' : 'sl', `${symbol} detected ${resultLabel} during scan`);
+        }
+
+        renderCard(item);
+        updateKPIs();
+        updateWinrateFromSignals();
+        await new Promise(r=>setTimeout(r, 120));
+      }catch(err){
+        console.warn('scan symbol err', symbol, err);
+      }
+    }
+
+    DOM('#status').innerText = 'Scan complete';
+    DOM('#startBtn').disabled = false;
+
+    if(enableAuto){
+      if(autoInterval) clearInterval(autoInterval);
+      autoInterval = setInterval(()=> {
+        if(abort){ clearInterval(autoInterval); autoInterval = null; return; }
+        logLine('Auto-monitor: checking live prices for open signals');
+        checkLivePrices();
+      }, AUTO_INTERVAL_MS);
+      logLine('Auto-monitor enabled (interval ' + autoMinutes + ' minutes)');
+    }
+  }catch(e){
+    logLine('startScan fatal: ' + (e && e.message ? e.message : e));
+    DOM('#startBtn').disabled = false;
+    DOM('#status').innerText = 'Error';
+  }
+}
+
+function stopScan(){ abort = true; if(autoInterval){ clearInterval(autoInterval); autoInterval = null; logLine('Auto-monitor stopped'); } }
+
+/* --------------------
+   Live price checker (updates pie on TP/SL)
+   -------------------- */
+async function checkLivePrices(){
+  try{
+    const opens = Array.from(signals.entries()).filter(([sym,s])=> s.state === 'waiting' || s.state === 'open').map(([sym])=>sym);
+    if(opens.length === 0){ logLine('No open signals to monitor'); return; }
+    logLine(`Monitoring ${opens.length} open signals...`);
+    for(const sym of opens){
+      try{
+        const priceObj = await fetchJson(`https://fapi.binance.com/fapi/v1/ticker/price?symbol=${sym}`);
+        const price = +(priceObj.price || priceObj.lastPrice || 0);
+        if(!price || !storeBySymbol.has(sym)) continue;
+        const it = storeBySymbol.get(sym);
+        if(it.signal === 'long'){
+          if(price >= it.tp1 || price >= it.tp2 || price >= it.tp3){
+            signals.set(sym, { state: 'win' });
+            appendHistory({ time: new Date().toISOString(), symbol: sym, tf: it.tf, result: 'TP' });
+            showNotif(sym, 'tp', `TP hit @ ${price}`);
+            logLine(`${sym} TP hit @ ${price}`);
+            updateWinrateFromSignals();
+          } else if(price <= it.sl){
+            signals.set(sym, { state: 'loss' });
+            appendHistory({ time: new Date().toISOString(), symbol: sym, tf: it.tf, result: 'SL' });
+            showNotif(sym, 'sl', `SL hit @ ${price}`);
+            logLine(`${sym} SL hit @ ${price}`);
+            updateWinrateFromSignals();
+          }
+        } else if(it.signal === 'short'){
+          if(price <= it.tp1 || price <= it.tp2 || price <= it.tp3){
+            signals.set(sym, { state: 'win' });
+            appendHistory({ time: new Date().toISOString(), symbol: sym, tf: it.tf, result: 'TP' });
+            showNotif(sym, 'tp', `TP hit @ ${price}`);
+            logLine(`${sym} TP hit @ ${price}`);
+            updateWinrateFromSignals();
+          } else if(price >= it.sl){
+            signals.set(sym, { state: 'loss' });
+            appendHistory({ time: new Date().toISOString(), symbol: sym, tf: it.tf, result: 'SL' });
+            showNotif(sym, 'sl', `SL hit @ ${price}`);
+            logLine(`${sym} SL hit @ ${price}`);
+            updateWinrateFromSignals();
+          }
+        }
+      }catch(e){ console.warn('checkLivePrices err', sym, e); }
+    }
+  }catch(e){ console.warn('checkLivePrices outer err', e); }
+}
+
+/* --------------------
+   KPI & Winrate (no queue)
+   -------------------- */
+function updateKPIs(){
+  const all = Array.from(storeBySymbol.values());
+  const longC = all.filter(x=>x.signal === 'long').length;
+  const shortC = all.filter(x=>x.signal === 'short').length;
+  const openC = all.filter(symItem=> {
+    // try get corresponding symbol by entry in storeBySymbol: we need to check signals map
+    // find symbol by value reference (values don't carry symbol), so simpler: count via signals
+    return false;
+  }).length;
+  // Simpler KPI: show counts based on signals map
+  let winC=0, lossC=0, waitingC=0;
+  for(const [sym,s] of signals.entries()){
+    if(!s || !s.state) waitingC++;
+    else if(s.state==='win') winC++;
+    else if(s.state==='loss') lossC++;
+    else if(s.state==='waiting' || s.state==='open') waitingC++;
+  }
+  DOM('#kpis').innerHTML = `<div class="box">WIN: ${winC}</div><div class="box">LOSS: ${lossC}</div><div class="box">WAITING: ${waitingC}</div><div class="box">Scanned: ${Array.from(storeBySymbol.keys()).length}</div>`;
+}
+
+function updateWinrateFromSignals(){
+  try{
+    const hist = getHistory();
+    const doneFromHistory = hist.map(h => ({ symbol: h.symbol, result: h.result }));
+    let wins = doneFromHistory.filter(d=>d.result && String(d.result).toUpperCase().startsWith('TP')).length;
+    let losses = doneFromHistory.filter(d=>d.result && String(d.result).toUpperCase().startsWith('SL')).length;
+    for(const [sym, st] of signals.entries()){
+      if(st.state === 'win'){
+        if(!doneFromHistory.find(d=>d.symbol===sym && String(d.result).toUpperCase().startsWith('TP'))){
+          wins++;
+        }
+      } else if(st.state === 'loss'){
+        if(!doneFromHistory.find(d=>d.symbol===sym && String(d.result).toUpperCase().startsWith('SL'))){
+          losses++;
+        }
+      }
+    }
+    // textual fallback kept if needed
+    try{ if(DOM('#winratePct')) DOM('#winratePct').innerText = (wins+losses) ? Math.round((wins/(wins+losses))*100) + '%' : '—'; }catch(e){}
+    // update pie visualization
+    try{ updatePie(); }catch(e){ logLine('updatePie err in updateWinrateFromSignals: '+(e && e.message?e.message:e)); }
+    updateKPIs();
+  }catch(e){ console.warn('updateWinrateFromSignals err', e); }
+}
+
+/* --------------------
+   Notifications & audio
+   -------------------- */
+function playAlarmOnline(){ const a = document.getElementById('alarmAudio'); if(!a) return; a.currentTime = 0; const p = a.play(); if(p && p.catch){ p.catch(()=> {}); } }
+function showNotif(symbol, type, text){
+  const n = document.createElement('div');
+  n.className = 'notify ' + (type === 'tp' ? 'tp' : 'sl');
+  n.innerHTML = `<strong>${symbol}</strong><div style="margin-top:6px">${text}</div>`;
+  document.getElementById('notifLayer').appendChild(n);
+  n.style.opacity = 0; n.style.transform = 'translateY(8px)';
+  requestAnimationFrame(()=>{ n.style.transition='all .18s'; n.style.opacity = 1; n.style.transform = 'translateY(0)'; });
+  playAlarmOnline();
+  setTimeout(()=>{ n.style.transition='opacity .4s'; n.style.opacity = 0; setTimeout(()=> n.remove(), 420); }, 7000);
+}
+
+/* --------------------
+   Hidden history trigger
+   -------------------- */
+let triggerClicks = 0, triggerTimer = null;
+DOM('#historyTrigger').addEventListener('click', ()=>{
+  triggerClicks++;
+  if(triggerTimer) clearTimeout(triggerTimer);
+  triggerTimer = setTimeout(()=>{ triggerClicks=0; }, 800);
+  if(triggerClicks >= 3){
+    const hc = DOM('#historyContainer');
+    hc.style.display = (hc.style.display === 'block') ? 'none' : 'block';
+    alert(hc.style.display === 'block' ? 'Hidden history shown (dev)' : 'Hidden history hidden');
+    triggerClicks = 0;
+  }
+});
+
+/* --------------------
+   Init
+   -------------------- */
+updateHiddenHistory();
+try{ initPie(); }catch(e){ logLine('initPie initial err: ' + (e && e.message ? e.message : e)); }
+initChartsIfNeeded();
+logLine('Ready. Tekan Start Scan (Binance) untuk mulai. ATR/SR controls aktif.');
+
+// --- Fullscreen chart handlers ---
+(function(){
+  try{
+    const container = document.getElementById('chartContainer');
+    const fsBtn = document.getElementById('fullscreenBtn');
+    const closeBtn = document.getElementById('closeFullscreenBtn');
+    if(!container || !fsBtn || !closeBtn) return;
+
+    async function enterFull(){
+      try{
+        if(container.requestFullscreen){
+          await container.requestFullscreen();
+        } else if(container.webkitRequestFullscreen){
+          container.webkitRequestFullscreen();
+        }
+        // try to lock orientation to landscape if available
+        try{
+          if(screen.orientation && screen.orientation.lock){
+            await screen.orientation.lock('landscape').catch(()=>{});
+          } else if(window.screen && window.screen.lockOrientation){
+            try{ window.screen.lockOrientation('landscape'); }catch(e){}
+          }
+        }catch(e){}
+        container.classList.add('fullscreen');
+        fsBtn.style.display = 'none';
+        closeBtn.style.display = 'block';
+        // best effort resize chart to fill viewport
+        setTimeout(()=>{ try{ if(window.chart && typeof window.chart.resize === 'function'){ window.chart.resize(window.innerWidth, window.innerHeight); } }catch(e){} }, 250);
+      }catch(e){ console.warn('enterFull err', e); logLine('enterFull err: ' + (e && e.message ? e.message : e)); }
+    }
+
+    async function exitFull(){
+      try{
+        if(document.fullscreenElement || document.webkitFullscreenElement){
+          if(document.exitFullscreen) await document.exitFullscreen();
+          else if(document.webkitExitFullscreen) document.webkitExitFullscreen();
+        }
+        try{ if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch(e){}
+      }catch(e){ console.warn('exitFull err', e); }
+      container.classList.remove('fullscreen');
+      fsBtn.style.display = 'block';
+      closeBtn.style.display = 'none';
+      setTimeout(()=>{ try{ if(window.chart && typeof window.chart.resize === 'function'){ window.chart.resize(document.getElementById('chart').clientWidth, 360); } }catch(e){} }, 250);
+    }
+
+    fsBtn.addEventListener('click', (e)=>{ e.preventDefault(); enterFull(); });
+    closeBtn.addEventListener('click', (e)=>{ e.preventDefault(); exitFull(); });
+
+    document.addEventListener('fullscreenchange', ()=>{ 
+      if(!document.fullscreenElement){ 
+        container.classList.remove('fullscreen'); fsBtn.style.display='block'; closeBtn.style.display='none'; 
+        try{ if(screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch(e){}
+        try{ if(window.chart && typeof window.chart.resize === 'function'){ window.chart.resize(document.getElementById('chart').clientWidth, 360); } }catch(e){}
+      } else {
+        setTimeout(()=>{ try{ if(window.chart && typeof window.chart.resize === 'function'){ window.chart.resize(window.innerWidth, window.innerHeight); } }catch(e){} },250);
+      }
+    });
+
+    // ensure window resize reflects on charts (handles orientation changes)
+    window.addEventListener('resize', ()=>{ 
+      try{
+        if(window.chart && typeof window.chart.resize === 'function'){
+          if(document.fullscreenElement) window.chart.resize(window.innerWidth, window.innerHeight);
+          else window.chart.resize(document.getElementById('chart').clientWidth, document.getElementById('chart').clientHeight || 360);
+        }
+      }catch(e){}
+    });
+
+  }catch(e){ console.warn('fullscreen handler init', e); logLine('fullscreen init err: ' + (e && e.message ? e.message : e)); }
+})();
+
+/* --------------------
+   Utility: if start button not found at runtime -> help
+   -------------------- */
+if(!DOM('#startBtn')){
+  alert('Start button (#startBtn) not found in DOM — cek id tombol.');
+}
+
+/* --------------------
+   End try wrapper
+   -------------------- */
+} catch(e){
+  var logEl=document.getElementById('log');
+  if(logEl){logEl.innerText+='[FATAL] '+e.message+'\\n'+(e.stack||'')+'\\n';}
+  alert('JS Fatal Error: '+e.message);
+}
+
+/* --------------------
+   Global error handler
+   -------------------- */
+window.onerror = function(message, source, lineno, colno, error){
+  try{
+    const log = document.getElementById('log');
+    if(log){
+      log.innerText += '[ERROR] ' + message + ' @' + source + ':' + lineno + ':' + colno + '\\n';
+      if(error && error.stack){
+        log.innerText += error.stack + '\\n';
+      }
+      log.scrollTop = log.scrollHeight;
+    }
+  }catch(e){}
+  return false;
+};
+</script>
+
+<!-- Injected logger patch -->
+<script>
+(function(){
+  console.log('[LOGGER] injection starting');
+
+  if(typeof window.loadChartBySymbol === 'function'){
+    console.log('[LOGGER] wrapping loadChartBySymbol');
+    window._origLoadChart = window.loadChartBySymbol;
+    window.loadChartBySymbol = function(symbol){
+      try{
+        window._origLoadChart.apply(this, arguments);
+      }catch(e){ console.warn('[LOGGER] original loadChartBySymbol error', e); }
+      try{
+        let item = null;
+        if(window.storeBySymbol && typeof window.storeBySymbol.get==='function'){
+          item = window.storeBySymbol.get(symbol);
+        } else if(window.storeBySymbol && window.storeBySymbol[symbol]){
+          item = window.storeBySymbol[symbol];
+        } else if(window.allSymbols && window.allSymbols[symbol]){
+          item = window.allSymbols[symbol];
+        }
+        console.log('[LOGGER] item for symbol', symbol, item);
+      }catch(e){ console.warn('[LOGGER] log injection error', e); }
+    }
+  } else {
+    console.warn('[LOGGER] loadChartBySymbol not found on page load');
+  }
+  console.log('[LOGGER] injection finished');
+})();
+</script>
+<!-- End logger patch -->
+
+</body>
+</html>
